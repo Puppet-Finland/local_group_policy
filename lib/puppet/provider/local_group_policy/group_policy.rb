@@ -412,7 +412,7 @@ Puppet::Type.type(:local_group_policy).provide(:group_policy) do
 
 	Dir.entries(dDir).each do |file|
 		tShort = file.gsub /(\w+)\.admx/, '\1'
-		if tShort != '.' and tShort != '..' and tShort != 'en-US'
+                if ! File.directory?(tShort)
 			dFile = REXML::Document.new( File.new("#{dDir}\\#{tShort}.admx"))
 			eFile = REXML::Document.new( File.new("#{eDir}\\#{tShort}.adml"))
 
