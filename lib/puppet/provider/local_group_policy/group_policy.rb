@@ -183,7 +183,7 @@ Puppet::Type.type(:local_group_policy).provide(:group_policy) do
         end
       end
 
-        #Look up settings values
+      #Look up settings values
       #policy_setting_def = mapPolicy
 
       log.debug "#{settings}\n"
@@ -264,101 +264,101 @@ Puppet::Type.type(:local_group_policy).provide(:group_policy) do
   def self.mapPolicies ( droot, eroot, policyID)
     log = Logger::new('c:\windows\temp\debug.txt')
 
-	@policyString = mapPolicyStrings(eroot)
-	#log.debug @policyString
-	policy = {}
-	policyName = ""
-	#Map a policies
-	droot.each_element("//policies/policy[@name=\"#{policyID}\"]") do |policyElement|
+  @policyString = mapPolicyStrings(eroot)
+  #log.debug @policyString
+  policy = {}
+  policyName = ""
+  #Map a policies
+  droot.each_element("//policies/policy[@name=\"#{policyID}\"]") do |policyElement|
 
-		policyID = policyElement.attributes["name"]
-		policyName = @policyString[policyElement.attributes["displayName"].gsub /^\$\(\w+\.(\w+)\)/, '\1']
+    policyID = policyElement.attributes["name"]
+    policyName = @policyString[policyElement.attributes["displayName"].gsub /^\$\(\w+\.(\w+)\)/, '\1']
 
-		#log.debug policyName
-		#Set up policy hash
-		#policy[policyName] = { :policyID => policyID }
+    #log.debug policyName
+    #Set up policy hash
+    #policy[policyName] = { :policyID => policyID }
 
-		#policy[policyName].merge!( :nameSpace => nameSpace)
+    #policy[policyName].merge!( :nameSpace => nameSpace)
 
     policy[policyName] = {}
-		policy[policyName].merge!( :policyClass     => policyElement.attributes["class"] )
-		#policy[policyName].merge!( :policyParentKey => policyElement.attributes["key"] )
-		policyEnableValueName = policyElement.attributes["valueName"]
-		# Set enabled info
-		policyEnableElement = policyElement.elements["enabledValue[1]/*"] || policyElement.elements["enabledList[1]/*"]
-		if policyEnableElement != nil
-			if policyEnableElement.name != "item"
-				policyEnableType = reg_type_conv_xml(policyEnableElement.name)
-				policyEnableValue = policyEnableElement.attributes["value"]
-				policyEnableKey = policy[policyName][:policyParentKey]
-            else
-				policyEnableKey = policyEnableElement.attributes["key"]
-				policyEnableValueName = policyEnableElement.attributes["valueName"]
-				policyEnableItemElement = policyEnableElement.elements['value[1]/*']
-				policyEnableType = reg_type_conv_xml(policyEnableItemElement.name)
-				policyEnableValue = policyEnableItemElement.attributes["value"]
-			end
-			policy[policyName].merge!( :policyEnable => { :enableKey => policyEnableKey, :policyEnableValueName => policyEnableValueName, :enableSetting =>  policyEnableValue, :enableType => policyEnableType} )
-		end
+    policy[policyName].merge!( :policyClass     => policyElement.attributes["class"] )
+    #policy[policyName].merge!( :policyParentKey => policyElement.attributes["key"] )
+    policyEnableValueName = policyElement.attributes["valueName"]
+    # Set enabled info
+    policyEnableElement = policyElement.elements["enabledValue[1]/*"] || policyElement.elements["enabledList[1]/*"]
+    if policyEnableElement != nil
+      if policyEnableElement.name != "item"
+        policyEnableType = reg_type_conv_xml(policyEnableElement.name)
+        policyEnableValue = policyEnableElement.attributes["value"]
+        policyEnableKey = policy[policyName][:policyParentKey]
+      else
+        policyEnableKey = policyEnableElement.attributes["key"]
+        policyEnableValueName = policyEnableElement.attributes["valueName"]
+        policyEnableItemElement = policyEnableElement.elements['value[1]/*']
+        policyEnableType = reg_type_conv_xml(policyEnableItemElement.name)
+        policyEnableValue = policyEnableItemElement.attributes["value"]
+      end
+      policy[policyName].merge!( :policyEnable => { :enableKey => policyEnableKey, :policyEnableValueName => policyEnableValueName, :enableSetting =>  policyEnableValue, :enableType => policyEnableType} )
+    end
 
-	end
-	# Now go get all settings for each policy, if there are any
-	policySettings = {}
-	droot.each_element("//policy[@name=\"#{policyID}\"]/elements/*") do |policySettingElement|
-		pSettingRefId = policySettingElement.attributes["id"]
-		setelepresentation = eroot.elements["//presentation/*[@refId=\"#{pSettingRefId}\"]"]
+  end
+  # Now go get all settings for each policy, if there are any
+  policySettings = {}
+  droot.each_element("//policy[@name=\"#{policyID}\"]/elements/*") do |policySettingElement|
+    pSettingRefId = policySettingElement.attributes["id"]
+    setelepresentation = eroot.elements["//presentation/*[@refId=\"#{pSettingRefId}\"]"]
 
-		# Set each Setting : Text String
-		pSettingText = ""
-		if setelepresentation.elements['label'] != nil
-			pSettingText = setelepresentation.elements['label'].text
-            else
-			pSettingText = setelepresentation.text
-		end
-		# Set up policySetting Hash
-		policySettings[pSettingText] = {}
+    # Set each Setting : Text String
+    pSettingText = ""
+    if setelepresentation.elements['label'] != nil
+      pSettingText = setelepresentation.elements['label'].text
+    else
+      pSettingText = setelepresentation.text
+    end
+    # Set up policySetting Hash
+    policySettings[pSettingText] = {}
 
 
-		# Check for a different key for setting or set to parent
-		pSettingKey = ""
-		if policySettingElement.attributes["key"]
-			pSettingKey = policySettingElement.attributes["key"]
-            else
-			pSettingKey = droot.elements["//policy[@name=\"#{policyID}\"]"].attributes["key"]
-		end
-		policySettings[pSettingText].merge!( :settingKey => pSettingKey )
+    # Check for a different key for setting or set to parent
+    pSettingKey = ""
+    if policySettingElement.attributes["key"]
+      pSettingKey = policySettingElement.attributes["key"]
+    else
+      pSettingKey = droot.elements["//policy[@name=\"#{policyID}\"]"].attributes["key"]
+    end
+    policySettings[pSettingText].merge!( :settingKey => pSettingKey )
 
-		# Set each Setting : Registry Value String
-		policySettings[pSettingText].merge!( :settingValue => policySettingElement.attributes["valueName"] )
+    # Set each Setting : Registry Value String
+    policySettings[pSettingText].merge!( :settingValue => policySettingElement.attributes["valueName"] )
 
-		# Set each Setting : Registry Type
-		pSettingType = ""
-		if pSettingType == "enum"
-			option = policySettingElement.elements["item/value[1]/*"].name
-            else
-			pSettingType = policySettingElement.name
-		end
-		policySettings[pSettingText].merge!( :settingType => reg_type_conv_xml(pSettingType) )
+    # Set each Setting : Registry Type
+    pSettingType = ""
+    if pSettingType == "enum"
+      option = policySettingElement.elements["item/value[1]/*"].name
+    else
+      pSettingType = policySettingElement.name
+    end
+    policySettings[pSettingText].merge!( :settingType => reg_type_conv_xml(pSettingType) )
 
-		# Set each Setting : Default Reg Value Setting and if its required
-		if policySettingElement.attributes["required"]
-			pSettingRequired = policySettingElement.attributes["required"]
+    # Set each Setting : Default Reg Value Setting and if its required
+    if policySettingElement.attributes["required"]
+      pSettingRequired = policySettingElement.attributes["required"]
 
-			pSettingDefaultValue = setelepresentation.attributes["defaultChecked"] || setelepresentation.attributes["defaultItem"] || setelepresentation.attributes["defaultValue"]
-			if pSettingDefaultValue == "true"
-				pSettingDefaultValue = 1
-                elsif pSettingDefaultValue == "false"
-				pSettingDefaultValue = 0
-                elsif pSettingDefaultValue == nil
-				pSettingDefaultValue = ""
-			end
-			policySettings[pSettingText].merge!(:settingRequired => pSettingRequired, :settingDefault => pSettingDefaultValue)
-            else
-			policySettings[pSettingText].merge!(:settingRequired => pSettingRequired)
-		end
-	end
-	policy[policyName].merge!(:policy_settings => policySettings )
-	policy
+      pSettingDefaultValue = setelepresentation.attributes["defaultChecked"] || setelepresentation.attributes["defaultItem"] || setelepresentation.attributes["defaultValue"]
+      if pSettingDefaultValue == "true"
+        pSettingDefaultValue = 1
+      elsif pSettingDefaultValue == "false"
+        pSettingDefaultValue = 0
+      elsif pSettingDefaultValue == nil
+        pSettingDefaultValue = ""
+      end
+      policySettings[pSettingText].merge!(:settingRequired => pSettingRequired, :settingDefault => pSettingDefaultValue)
+    else
+      policySettings[pSettingText].merge!(:settingRequired => pSettingRequired)
+    end
+  end
+  policy[policyName].merge!(:policy_settings => policySettings )
+  policy
   end
 
   def self.unbuffer_value(value)
@@ -368,33 +368,33 @@ Puppet::Type.type(:local_group_policy).provide(:group_policy) do
 
   def self.get_current_settings
 
-	#origfile = 'c:\Windows\sysnative\GroupPolicy\Machine\Registry.pol'
-        #puts "File #{$polfile_orig}***********"
-        #tempfile = 'c:\Windows\Temp\RegistryMachineBak.pol'
-        polfile = File.open($polfile_orig,'rb:UTF-8').read
-        lineary = polfile.split("]\x00[")
-	#clean first and last lines
-	lineary[0] = lineary[0].gsub!(/.*\[/,'')
-	lastindex = lineary.length - 1
-	lineary[lastindex] = lineary[lastindex].gsub!(/\].*/,'')
+  #origfile = 'c:\Windows\sysnative\GroupPolicy\Machine\Registry.pol'
+  #puts "File #{$polfile_orig}***********"
+  #tempfile = 'c:\Windows\Temp\RegistryMachineBak.pol'
+  polfile = File.open($polfile_orig,'rb:UTF-8').read
+  lineary = polfile.split("]\x00[")
+  #clean first and last lines
+  lineary[0] = lineary[0].gsub!(/.*\[/,'')
+  lastindex = lineary.length - 1
+  lineary[lastindex] = lineary[lastindex].gsub!(/\].*/,'')
+ 
+  regary = []
 
-	regary = []
+  lineary.each do |line|
+    entry = line.split(";")
+    reg_key = unbuffer_value(entry[0])
+    reg_val = unbuffer_value(entry[1])
+    reg_typ = reg_type_conv_pol(unbuffer_value(entry[2]))
+    reg_siz = unbuffer_value(entry[3])
+    reg_dat = unbuffer_value(entry[4])
+    #TODO: Fix this to handle del lines
+    if ! reg_val.include? "**del."
+      regary << [ reg_key, reg_val, reg_typ, reg_siz, reg_dat ]
+      #puts regary
+    end
+  end
 
-	lineary.each do |line|
-        entry = line.split(";")
-        reg_key = unbuffer_value(entry[0])
-        reg_val = unbuffer_value(entry[1])
-        reg_typ = reg_type_conv_pol(unbuffer_value(entry[2]))
-        reg_siz = unbuffer_value(entry[3])
-        reg_dat = unbuffer_value(entry[4])
-        #TODO: Fix this to handle del lines
-        if ! reg_val.include? "**del."
-            regary << [ reg_key, reg_val, reg_typ, reg_siz, reg_dat ]
-            #puts regary
-        end
-	end
-
-	regary
+  regary
 
   end
 
@@ -403,63 +403,63 @@ Puppet::Type.type(:local_group_policy).provide(:group_policy) do
 # Output: [policyFileName, policyText, policyID, key, valueName]
   def self.build_settings_lookup
 
-	settings_lookup = []
+  settings_lookup = []
 
-	# Default variables
-	dDir = 'C:\Windows\PolicyDefinitions'
-	eDir = 'C:\Windows\PolicyDefinitions\en-US'
+  # Default variables
+  dDir = 'C:\Windows\PolicyDefinitions'
+  eDir = 'C:\Windows\PolicyDefinitions\en-US'
 
 
-	Dir.entries(dDir).each do |file|
-		tShort = file.gsub /(\w+)\.admx/, '\1'
-                if ! File.directory?(tShort)
-			dFile = REXML::Document.new( File.new("#{dDir}\\#{tShort}.admx"))
-			eFile = REXML::Document.new( File.new("#{eDir}\\#{tShort}.adml"))
+  Dir.entries(dDir).each do |file|
+    tShort = file.gsub /(\w+)\.admx/, '\1'
+    if ! File.directory?(tShort)
+      dFile = REXML::Document.new( File.new("#{dDir}\\#{tShort}.admx"))
+      eFile = REXML::Document.new( File.new("#{eDir}\\#{tShort}.adml"))
 
-			droot = dFile.root
-			eroot = eFile.root
+      droot = dFile.root
+      eroot = eFile.root
 
-			policyString = mapPolicyStrings(eroot)
+      policyString = mapPolicyStrings(eroot)
 
-            if droot.elements['//categories/category[1]']
-                templateName = policyString[droot.elements['//categories/category[1]'].attributes["displayName"].gsub /^\$\(\w+\.(\w+)\)/, '\1']
-			else
-                templateName = "UNK for #{tShort}"
-            end
-			droot.each_element('//policy') do |policy|
-				valueName = ""
-				policyID = policy.attributes["name"]
-				parentKey = policy.attributes["key"]
-				policyText = policyString[policy.attributes["displayName"].gsub /^\$\(\w+\.(\w+)\)/, '\1']
-				if policy.elements['enabledList/item/*']
-					valueName = policy.elements['enabledList[1]/item'].attributes["valueName"]
-                    else
-					valueName = policy.attributes["valueName"]
-				end
-				if policy.elements['enabledList/item/*']
-					key = policy.elements['enabledList[1]/item'].attributes["key"]
-                    else
-					key = parentKey
-				end
-				if valueName != nil and key != nil
-					#puts key + "," + valueName
-					#key.gsub!(/\\+/,"\\")
-					settings_lookup << [ tShort, policyText, policyID, key, valueName, templateName]
-				end
-				policy.each_element('elements/*') do |policy_element|
-					valueName = policy_element.attributes["valueName"]
-					if valueName != nil and key != nil
-						#puts key + "," + valueName
-						#key.gsub!(/\\\\/,"\\")
-						key = parentKey
-						settings_lookup << [tShort, policyText, policyID, key, valueName, templateName]
-						#puts settings_lookup
-					end
-				end
-			end
-		end
-	end
-	settings_lookup
+      if droot.elements['//categories/category[1]']
+        templateName = policyString[droot.elements['//categories/category[1]'].attributes["displayName"].gsub /^\$\(\w+\.(\w+)\)/, '\1']
+      else
+        templateName = "UNK for #{tShort}"
+      end
+      droot.each_element('//policy') do |policy|
+      valueName = ""
+      policyID = policy.attributes["name"]
+      parentKey = policy.attributes["key"]
+      policyText = policyString[policy.attributes["displayName"].gsub /^\$\(\w+\.(\w+)\)/, '\1']
+      if policy.elements['enabledList/item/*']
+        valueName = policy.elements['enabledList[1]/item'].attributes["valueName"]
+      else
+        valueName = policy.attributes["valueName"]
+      end
+      if policy.elements['enabledList/item/*']
+        key = policy.elements['enabledList[1]/item'].attributes["key"]
+      else
+        key = parentKey
+      end
+      if valueName != nil and key != nil
+        #puts key + "," + valueName
+        #key.gsub!(/\\+/,"\\")
+        settings_lookup << [ tShort, policyText, policyID, key, valueName, templateName]
+      end
+      policy.each_element('elements/*') do |policy_element|
+      valueName = policy_element.attributes["valueName"]
+      if valueName != nil and key != nil
+        #puts key + "," + valueName
+        #key.gsub!(/\\\\/,"\\")
+        key = parentKey
+        settings_lookup << [tShort, policyText, policyID, key, valueName, templateName]
+        #puts settings_lookup
+      end
+    end
+  end
+  end
+  end
+  settings_lookup
   end
 
 def self.reg_type_conv_pol_rev (type_setting)
