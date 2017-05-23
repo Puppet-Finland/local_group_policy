@@ -1,39 +1,39 @@
 # Puppet Local Group Policy (Windows)
 
-create by Paul Cannon at email paulscannon at gmail dot com 
+**NOTE:** This module has been abandoned both upstream and here. You are 
+strongly advise to *not* use this module nor the upstream version.
 
-## Local_security_policy features
+I have personally given up trying to use this local_group_policy module. The
+main reason is that it breaks if there are any group policy localization files.
+This happens if one has installed localized software which bundles group
+policies with it. This renders to provider useless except in pure American
+English environment.
 
-If you want to leave the options as default, please do not fill in.  The module will pull the default value from microsoft standards.
+What the provider essentially does (via tons of detours) is change the contents
+of Registry.pol, which is a simple text file wiht contents such as this
+(linefeeds added for clarity):
 
+    PReg
+    [Software\Microsoft\Windows\CurrentVersion\Policies\System;Wallpaper;;F;c:\users\samuli\pictures\green.jpg]
+    [Software\Microsoft\Windows\CurrentVersion\Policies\System;WallpaperStyle;;;4]
+    [Software\Policies\Microsoft\Windows\ControlPanel\Desktop;ScreenSaveActive;;;1]
 
-This module uses types and providers to list, update, validate settings
+Serving the Registry.pol file from the Puppet fileserver, or generating it from 
+a template, is much simpler and more robust approach than what the 
+local_group_policy used. Here's a snippet of Puppet code that refreshes the 
+local group policy:
 
-## Use
-The title and name of the resources is exact match of what is in secedit GUI.  If you are uncertain of the setting name and values just user 'resource' to pipe them all into a file and make adjustments as necessary.
-The block will look like this.  For some values this will be actual value and not human readable value.  For instance: If GPO has a value of "3 - Tuesday", the actual value is likely 3.
-```
-local_group_policy { 'Specify intranet Microsoft update service location': <- Name exactly like the GPO
-   ensure = > 'present',    <- Always present
-   policy_settings => {     <- This is an area with the options listed in the group policy editor 
-      'Set the intranet statistics server:' => 'https://demo.host.com',    
-      'Set the intranet update service for detecting updates:' => 'https://demo.host.com',  
-   }
-}
-```
+    file { 'local-group-policy':
+        ensure => 'present',
+        name   => 'C:\Windows\System32\GroupPolicy\User\Registry.pol',
+        source => 'puppet:///modules/windesktop/Registry.pol',
+        notify => Exec['refresh-group-policy'],
+    }
+    
+    exec { 'refresh-group-policy':
+        command     => 'c:\Windows\System32\gpupdate.exe /force',
+        refreshonly => true,
+    }
 
-
-### Listing all settings
-Show all local_group_policy resources available on server.  Note this will only list the policies that are currently set and not the X number of thousand policies that Microsoft makes available.
-```
-puppet resource local_group_policy
-```
-Show a single local_security_policy resources available on server. Currently this most be something already set on the server.   I am working on providing the defaults back for any setting
-```
-puppet resource local_security_policy 'Specify intranet Microsoft update service location'
-
-
-```
-
-### More examples
-
+The Local Group Policy Editor (GUI) can be used to figure out what to put into
+Registry.pol.
