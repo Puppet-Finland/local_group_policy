@@ -10,7 +10,7 @@ policies with it. This renders to provider useless except in pure American
 English environment.
 
 What the provider essentially does (via tons of detours) is change the contents
-of Registry.pol, which is a simple text file wiht contents such as this
+of Registry.pol, which is a simple text file with contents such as this
 (linefeeds added for clarity):
 
     PReg
